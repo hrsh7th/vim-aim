@@ -5,11 +5,23 @@ let g:loaded_aim = v:true
 
 function! s:highlight() abort
   if !hlexists('AimLocation')
-    highlight! default link AimLocation IncSearch
+    highlight! default AimLocation
+    \   gui=bold,underline
+    \   guifg=Red
+    \   guibg=NONE
+    \   cterm=bold,underline
+    \   ctermfg=Red
+    \   ctermbg=NONE
   endif
 
   if !hlexists('AimCurrentLocation')
-    highlight! default link AimCurrentLocation Search
+    highlight! default AimCurrentLocation
+    \   gui=bold,underline
+    \   guifg=Yellow
+    \   guibg=NONE
+    \   cterm=bold,underline
+    \   ctermfg=Yellow
+    \   ctermbg=NONE
   endif
 endfunction
 call s:highlight()
@@ -19,6 +31,10 @@ augroup aim
   autocmd ColorScheme * call s:highlight()
 augroup END
 
-nnoremap <silent> <Plug>(aim-start) :<C-u>call aim#start()<CR>
-onoremap <silent> <Plug>(aim-start) :<C-u>call aim#start()<CR>
+nnoremap <silent> <Plug>(aim-start-upward) :<C-u>call aim#start('downward')<CR>
+nnoremap <silent> <Plug>(aim-start-downward) :<C-u>call aim#start('upward')<CR>
+xnoremap <silent> <Plug>(aim-start-upward) :<C-u>call aim#start('downward')<CR>
+xnoremap <silent> <Plug>(aim-start-downward) :<C-u>call aim#start('upward')<CR>
+onoremap <silent> <Plug>(aim-start-upward) :<C-u>call aim#start('downward')<CR>
+onoremap <silent> <Plug>(aim-start-downward) :<C-u>call aim#start('upward')<CR>
 

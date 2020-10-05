@@ -8,8 +8,11 @@ endfunction
 "
 " aim#start
 "
-function! aim#start() abort
+function! aim#start(dir) abort
   let s:state = {
+  \   'orig_dir': a:dir ==# 'upward' ? 'k' : 'j',
+  \   'orig_pos': getpos('.')[1 : 2],
+  \   'curr_pos': getpos('.')[1 : 2],
   \   'input': '',
   \   'prev_dir': '',
   \   'locations': [],
@@ -17,6 +20,7 @@ function! aim#start() abort
   let l:timer_id = timer_start(16, { -> s:on_input() }, { 'repeat': -1 })
   try
     call input('$ ')
+    redraw
   finally
     for l:match in getmatches()
       if l:match.group =~# '^Aim'
@@ -31,7 +35,8 @@ endfunction
 " aim#move
 "
 function! aim#move(dir) abort
-  call s:move(a:dir)
+  call s:move(a:dir, s:state.curr_pos)
+  redraw
   return ''
 endfunction
 
@@ -47,7 +52,7 @@ function! s:on_input() abort
 
   " Update location cache
   if l:input !=# ''
-    let s:state.locations = s:get_locations(s:state.input)
+    let s:state.locations = s:get_locations(s:state.input, s:state.orig_pos)
   else
     let s:state.locations = []
   endif
@@ -61,15 +66,17 @@ function! s:on_input() abort
   for l:location in s:state.locations
     call matchaddpos('AimLocation', [[l:location[0], l:location[1], strlen(s:state.input)]])
   endfor
+  call s:move(s:state.orig_dir, s:state.orig_pos)
   redraw
 endfunction
 
 "
 " move
 "
-function! s:move(dir) abort
-  let l:location = s:find(a:dir, s:state.input)
+function! s:move(dir, from_pos) abort
+  let l:location = s:find(a:dir, s:state.input, a:from_pos)
   if !empty(l:location)
+    let s:state.curr_pos = l:location
     call cursor(l:location)
     for l:match in getmatches()
       if l:match.group ==# 'AimCurrentLocation'
@@ -77,7 +84,6 @@ function! s:move(dir) abort
       endif
     endfor
     call matchaddpos('AimCurrentLocation', [[l:location[0], l:location[1], strlen(s:state.input)]])
-    redraw
   endif
   return ''
 endfunction
@@ -85,8 +91,8 @@ endfunction
 "
 " find
 "
-function! s:find(dir, input) abort
-  let l:cursor = getpos('.')[1 : 2]
+function! s:find(dir, input, from_pos) abort
+  let l:cursor = a:from_pos
   let l:locations = copy(s:state.locations)
   if a:dir ==# 'h'
     let l:locations = filter(l:locations, 'v:val[1] < l:cursor[1]')
@@ -118,40 +124,32 @@ function! s:compare(dir, cursor, pos1, pos2) abort
   let l:lnum_delta2 = abs(a:cursor[0] - a:pos2[0]) * 2
   let l:col_delta2 = abs(a:cursor[1] - a:pos2[1])
 
-  if !l:updown
-    let l:col_delta1 = l:col_delta1 * 0.1
-    let l:col_delta2 = l:col_delta2 * 0.1
-  else
-    let l:lnum_delta1 = l:lnum_delta1 * 0.1
-    let l:lnum_delta2 = l:lnum_delta2 * 0.1
-  endif
-
   return (l:lnum_delta1 + l:col_delta1) - (l:lnum_delta2 + l:col_delta2)
 endfunction
 
 "
 " get_locations
 "
-function! s:get_locations(input) abort
+function! s:get_locations(input, pos) abort
   let l:locations = []
 
-  let l:cursor = getpos('.')[1 : 2]
+  call cursor(a:pos)
   while v:true
-    let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/?'), 'bW')
+    let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/'), 'bW')
     if l:lnum == 0
       break
     endif
     let l:locations += [[l:lnum, l:col]]
   endwhile
-  call cursor(l:cursor)
+  call cursor(a:pos)
   while v:true
-    let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/?'), 'W')
+    let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/'), 'W')
     if l:lnum == 0
       break
     endif
     let l:locations += [[l:lnum, l:col]]
   endwhile
-  call cursor(l:cursor)
+  call cursor(a:pos)
 
   return l:locations
 endfunction
