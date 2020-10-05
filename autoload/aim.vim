@@ -1,11 +1,4 @@
 "
-" aim#active
-"
-function! aim#active() abort
-  return !empty(s:state)
-endfunction
-
-"
 " aim#start
 "
 function! aim#start(dir) abort
@@ -19,7 +12,10 @@ function! aim#start(dir) abort
   \ }
   let l:timer_id = timer_start(16, { -> s:on_input() }, { 'repeat': -1 })
   try
-    call input('$ ')
+    let l:input = input('$ ')
+    if empty(l:input)
+      call cursor(s:state.orig_pos)
+    endif
     redraw
   finally
     for l:match in getmatches()
@@ -75,7 +71,7 @@ endfunction
 "
 function! s:move(dir, from_pos) abort
   let l:location = s:find(a:dir, s:state.input, a:from_pos)
-  if !empty(l:location)
+  if !empty(l:location) && line('w0') <= l:location[0] && l:location[0] <= line('w$')
     let s:state.curr_pos = l:location
     call cursor(l:location)
     for l:match in getmatches()
