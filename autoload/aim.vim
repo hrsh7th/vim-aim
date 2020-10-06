@@ -55,6 +55,11 @@ function! s:on_input() abort
 
   " Update highlights
   for l:match in getmatches()
+    if l:match.group ==# 'AimCurrentLocation'
+      call matchdelete(l:match.id)
+    endif
+  endfor
+  for l:match in getmatches()
     if l:match.group ==# 'AimLocation'
       call matchdelete(l:match.id)
     endif
@@ -72,8 +77,8 @@ endfunction
 function! s:move(dir, from_pos) abort
   let l:location = s:find(a:dir, s:state.input, a:from_pos)
   if !empty(l:location) && line('w0') <= l:location[0] && l:location[0] <= line('w$')
-    let s:state.curr_pos = l:location
     call cursor(l:location)
+    let s:state.curr_pos = l:location
     for l:match in getmatches()
       if l:match.group ==# 'AimCurrentLocation'
         call matchdelete(l:match.id)
@@ -114,7 +119,6 @@ endfunction
 " compare
 "
 function! s:compare(dir, cursor, pos1, pos2) abort
-  let l:updown = index(['j', 'k'], a:dir) >= 0
   let l:lnum_delta1 = abs(a:cursor[0] - a:pos1[0]) * 2
   let l:col_delta1 = abs(a:cursor[1] - a:pos1[1])
   let l:lnum_delta2 = abs(a:cursor[0] - a:pos2[0]) * 2
