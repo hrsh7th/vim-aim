@@ -3,38 +3,87 @@ if exists('g:loaded_aim')
 endif
 let g:loaded_aim = v:true
 
-let g:aim = get(g:, 'aim', {})
-let g:aim.goto = get(g:aim, 'goto', { pos -> cursor(pos) })
-let g:aim.pattern = get(g:aim, 'pattern', { input -> '\V' . escape(input, '\/') })
-
-function! s:highlight() abort
-  if !hlexists('AimLocation')
-    highlight! default AimLocation
-    \   gui=bold,underline
-    \   guifg=Red
-    \   guibg=NONE
-    \   cterm=bold,underline
-    \   ctermfg=Red
-    \   ctermbg=NONE
-  endif
-
-  if !hlexists('AimCurrentLocation')
-    highlight! default AimCurrentLocation
-    \   gui=bold,underline
-    \   guifg=Yellow
-    \   guibg=NONE
-    \   cterm=bold,underline
-    \   ctermfg=Yellow
-    \   ctermbg=NONE
-  endif
-endfunction
-call s:highlight()
+let g:aim_enabled = get(g:, 'aim_enabled', v:true)
 
 augroup aim
   autocmd!
   autocmd ColorScheme * call s:highlight()
+  autocmd CmdlineLeave * if s:is_search() | call s:reserve_reset() | endif
 augroup END
 
-nnoremap <silent> <Plug>(aim-start-n) :<C-u>call aim#start('n')<CR>
-nnoremap <silent> <Plug>(aim-start-p) :<C-u>call aim#start('p')<CR>
+function! s:highlight() abort
+  highlight! Search
+  \   gui=bold,underline
+  \   guifg=Red
+  \   guibg=NONE
+  \   cterm=bold,underline
+  \   ctermfg=Red
+  \   ctermbg=NONE
+
+  highlight! IncSearch
+  \   gui=bold,underline
+  \   guifg=Yellow
+  \   guibg=NONE
+  \   cterm=bold,underline
+  \   ctermfg=Yellow
+  \   ctermbg=NONE
+endfunction
+call s:highlight()
+
+"
+" public mapping
+"
+nnoremap <silent><expr> <Plug>(aim-n) <SID>move('n')
+nnoremap <silent><expr> <Plug>(aim-N) <SID>move('N')
+
+"
+" private mapping
+"
+nnoremap <silent><Plug>(aim-internal-nohlsearch) :<C-u>nohlsearch<CR>
+xnoremap <silent><Plug>(aim-internal-nohlsearch) :<C-u>nohlsearch<CR>gv
+inoremap <silent><Plug>(aim-internal-nohlsearch) <C-o>:<C-u>nohlsearch<CR>
+
+"
+" move
+"
+function! s:move(dir) abort
+  call s:reserve_reset()
+  call feedkeys(a:dir, 'n')
+  return ''
+endfunction
+
+"
+" nohlsearch
+"
+function! s:nohlsearch() abort
+  call feedkeys("\<Plug>(aim-internal-nohlsearch)", 't')
+endfunction
+
+"
+" is_search
+"
+function! s:is_search() abort
+  return index(['/', '?'], get(get(v:, 'event', {}), 'cmdtype', '')) >= 0
+endfunction
+
+"
+" reserve_reset
+"
+function! s:reserve_reset() abort
+  if !g:aim_enabled
+    return
+  endif
+
+  augroup aim-reset
+    autocmd!
+  augroup END
+
+  let l:ctx = {}
+  function! l:ctx.callback() abort
+    augroup aim-reset
+      autocmd CursorMoved,InsertEnter,BufEnter * ++once call feedkeys("\<Plug>(aim-internal-nohlsearch)", 't')
+    augroup END
+  endfunction
+  call timer_start(200, { -> l:ctx.callback() })
+endfunction
 

@@ -1,5 +1,5 @@
 # vim-aim
-This plugin provides motion that similar to /.
+This plugin enhances / behaviour.
 
 # Status
 - API's aren't stable
@@ -8,9 +8,8 @@ This plugin provides motion that similar to /.
 
 # Usage
 ```viml
-nmap <C-n> <Plug>(aim-start-n)
-nmap <C-p> <Plug>(aim-start-p)
-cnoremap <C-n> <C-r>=aim#move('n')<CR>
-cnoremap <C-p> <C-r>=aim#move('p')<CR>
+let g:aim_enabled = v:true
+nmap n <Plug>(aim-n)
+nmap N <Plug>(aim-N)
 ```
 
