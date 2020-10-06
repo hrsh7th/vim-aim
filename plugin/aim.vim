@@ -31,10 +31,6 @@ augroup aim
   autocmd ColorScheme * call s:highlight()
 augroup END
 
-nnoremap <silent> <Plug>(aim-start-upward) :<C-u>call aim#start('downward')<CR>
-nnoremap <silent> <Plug>(aim-start-downward) :<C-u>call aim#start('upward')<CR>
-xnoremap <silent> <Plug>(aim-start-upward) :<C-u>call aim#start('downward')<CR>
-xnoremap <silent> <Plug>(aim-start-downward) :<C-u>call aim#start('upward')<CR>
-onoremap <silent> <Plug>(aim-start-upward) :<C-u>call aim#start('downward')<CR>
-onoremap <silent> <Plug>(aim-start-downward) :<C-u>call aim#start('upward')<CR>
+nnoremap <silent> <Plug>(aim-start-n) :<C-u>call aim#start('n')<CR>
+nnoremap <silent> <Plug>(aim-start-p) :<C-u>call aim#start('p')<CR>
 

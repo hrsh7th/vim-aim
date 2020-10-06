@@ -8,16 +8,9 @@ This plugin provides motion that similar to /.
 
 # Usage
 ```viml
-nmap e <Plug>(aim-start-upward)
-nmap E <Plug>(aim-start-downward)
-xmap e <Plug>(aim-start-upward)
-xmap E <Plug>(aim-start-downward)
-omap e <Plug>(aim-start-upward)
-omap E <Plug>(aim-start-downward)
-
-cmap <silent> <C-h> <C-r>=aim#move('h')<CR>
-cmap <silent> <C-j> <C-r>=aim#move('j')<CR>
-cmap <silent> <C-k> <C-r>=aim#move('k')<CR>
-cmap <silent> <C-l> <C-r>=aim#move('l')<CR>
+nmap <C-n> <Plug>(aim-start-n)
+nmap <C-p> <Plug>(aim-start-p)
+cnoremap <C-n> <C-r>=aim#move('n')<CR>
+cnoremap <C-p> <C-r>=aim#move('p')<CR>
 ```
 

@@ -3,16 +3,14 @@
 "
 function! aim#start(dir) abort
   let s:state = {
-  \   'orig_dir': a:dir ==# 'upward' ? 'k' : 'j',
+  \   'orig_dir': a:dir,
   \   'orig_pos': getpos('.')[1 : 2],
-  \   'curr_pos': getpos('.')[1 : 2],
   \   'input': '',
-  \   'prev_dir': '',
   \   'locations': [],
   \ }
   let l:timer_id = timer_start(16, { -> s:on_input() }, { 'repeat': -1 })
   try
-    let l:input = input('$ ')
+    let l:input = input('/')
     if empty(l:input)
       call cursor(s:state.orig_pos)
     endif
@@ -31,7 +29,7 @@ endfunction
 " aim#move
 "
 function! aim#move(dir) abort
-  call s:move(a:dir, s:state.curr_pos)
+  call s:move(a:dir, getpos('.')[1 : 2])
   redraw
   return ''
 endfunction
@@ -76,9 +74,8 @@ endfunction
 "
 function! s:move(dir, from_pos) abort
   let l:location = s:find(a:dir, s:state.input, a:from_pos)
-  if !empty(l:location) && line('w0') <= l:location[0] && l:location[0] <= line('w$')
+  if !empty(l:location)
     call cursor(l:location)
-    let s:state.curr_pos = l:location
     for l:match in getmatches()
       if l:match.group ==# 'AimCurrentLocation'
         call matchdelete(l:match.id)
@@ -95,20 +92,13 @@ endfunction
 function! s:find(dir, input, from_pos) abort
   let l:cursor = a:from_pos
   let l:locations = copy(s:state.locations)
-  if a:dir ==# 'h'
-    let l:locations = filter(l:locations, 'v:val[1] < l:cursor[1]')
+  if a:dir ==# 'n'
+    let l:locations = filter(l:locations, 'v:val[0] > l:cursor[0] || (v:val[0] == l:cursor[0] && v:val[1] > l:cursor[1])')
   endif
-  if a:dir ==# 'j'
-    let l:locations = filter(l:locations, 'v:val[0] > l:cursor[0]')
+  if a:dir ==# 'p'
+    let l:locations = filter(l:locations, 'v:val[0] < l:cursor[0] || (v:val[0] == l:cursor[0] && v:val[1] < l:cursor[1])')
+    let l:locations = reverse(l:locations)
   endif
-  if a:dir ==# 'k'
-    let l:locations = filter(l:locations, 'v:val[0] < l:cursor[0]')
-  endif
-  if a:dir ==# 'l'
-    let l:locations = filter(l:locations, 'v:val[1] > l:cursor[1]')
-  endif
-
-  let l:locations = sort(copy(l:locations), { a, b -> float2nr(s:compare(a:dir, l:cursor, a, b)) })
   if !empty(l:locations)
     return l:locations[0]
   endif
@@ -118,13 +108,11 @@ endfunction
 "
 " compare
 "
-function! s:compare(dir, cursor, pos1, pos2) abort
-  let l:lnum_delta1 = abs(a:cursor[0] - a:pos1[0]) * 2
-  let l:col_delta1 = abs(a:cursor[1] - a:pos1[1])
-  let l:lnum_delta2 = abs(a:cursor[0] - a:pos2[0]) * 2
-  let l:col_delta2 = abs(a:cursor[1] - a:pos2[1])
-
-  return (l:lnum_delta1 + l:col_delta1) - (l:lnum_delta2 + l:col_delta2)
+function! s:compare(pos1, pos2) abort
+  if a:pos1[0] - a:pos2[0] > 0
+    return a:pos1[1] - a:pos2[1]
+  endif
+  return a:pos1[0] - a:pos2[0]
 endfunction
 
 "
@@ -141,6 +129,7 @@ function! s:get_locations(input, pos) abort
     endif
     let l:locations += [[l:lnum, l:col]]
   endwhile
+  let l:locations = reverse(l:locations)
   call cursor(a:pos)
   while v:true
     let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/'), 'W')
