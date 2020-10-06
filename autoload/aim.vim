@@ -1,10 +1,17 @@
+let s:state = {}
+
 "
 " aim#start
 "
 function! aim#start(dir) abort
+  if !empty(s:state)
+    return aim#move(a:dir, '')
+  endif
+
   let s:state = {
   \   'orig_dir': a:dir,
   \   'orig_pos': getpos('.')[1 : 2],
+  \   'dir': a:dir,
   \   'input': '',
   \   'locations': [],
   \ }
@@ -16,22 +23,9 @@ function! aim#start(dir) abort
     endif
     redraw
   finally
-    for l:match in getmatches()
-      if l:match.group =~# '^Aim'
-        call matchdelete(l:match.id)
-      endif
-    endfor
     call timer_stop(l:timer_id)
   endtry
-endfunction
-
-"
-" aim#move
-"
-function! aim#move(dir) abort
-  call s:move(a:dir, getpos('.')[1 : 2])
-  redraw
-  return ''
+  call s:reserve_reset()
 endfunction
 
 "
@@ -46,6 +40,7 @@ function! s:on_input() abort
 
   " Update location cache
   if l:input !=# ''
+    call s:reserve_reset()
     let s:state.locations = s:get_locations(s:state.input, s:state.orig_pos)
   else
     let s:state.locations = []
@@ -53,12 +48,7 @@ function! s:on_input() abort
 
   " Update highlights
   for l:match in getmatches()
-    if l:match.group ==# 'AimCurrentLocation'
-      call matchdelete(l:match.id)
-    endif
-  endfor
-  for l:match in getmatches()
-    if l:match.group ==# 'AimLocation'
+    if l:match.group =~# '^Aim'
       call matchdelete(l:match.id)
     endif
   endfor
@@ -70,9 +60,33 @@ function! s:on_input() abort
 endfunction
 
 "
+" aim#move
+"
+function! aim#move(dir, fallback) abort
+  if !empty(s:state)
+    let s:state.dir = a:dir
+    call feedkeys("\<Plug>(aim-move)", 't')
+    return ''
+  endif
+  return a:fallback
+endfunction
+
+"
+" aim#_move
+"
+nnoremap <silent> <Plug>(aim-move) :<C-u>call aim#_move()<CR>
+cnoremap <silent> <Plug>(aim-move) <C-r>=aim#_move()<CR>
+function! aim#_move() abort
+  call s:move(s:state.dir, getpos('.')[1 : 2])
+  return ''
+endfunction
+
+"
 " move
 "
 function! s:move(dir, from_pos) abort
+  call s:reserve_reset()
+
   let l:location = s:find(a:dir, s:state.input, a:from_pos)
   if !empty(l:location)
     call g:aim.goto(l:location)
@@ -82,6 +96,7 @@ function! s:move(dir, from_pos) abort
       endif
     endfor
     call matchaddpos('AimCurrentLocation', [[l:location[0], l:location[1], strlen(l:location[2])]])
+    redraw!
   endif
   return ''
 endfunction
@@ -134,7 +149,7 @@ function! s:get_locations(input, pos) abort
 
   call cursor(a:pos)
   while v:true
-    let [l:lnum, l:col, l:sub] = searchpos(l:pattern, 'Wp')
+    let [l:lnum, l:col] = searchpos(l:pattern, 'W')
     if l:lnum == 0
       break
     endif
@@ -145,3 +160,32 @@ function! s:get_locations(input, pos) abort
   return l:locations
 endfunction
 
+"
+" reserve_reset
+"
+function! s:reserve_reset() abort
+  augroup aim
+    autocmd!
+  augroup END
+
+  let l:ctx = {}
+  function! l:ctx.callback() abort
+    augroup aim
+      autocmd!
+      autocmd BufEnter,InsertEnter,CursorMoved <buffer> ++once call <SID>clear()
+    augroup END
+  endfunction
+  call timer_start(0, { -> l:ctx.callback() })
+endfunction
+
+"
+" clear
+"
+function! s:clear() abort
+  let s:state = {}
+  for l:match in getmatches()
+    if l:match.group =~# '^Aim'
+      call matchdelete(l:match.id)
+    endif
+  endfor
+endfunction
