@@ -3,6 +3,10 @@ if exists('g:loaded_aim')
 endif
 let g:loaded_aim = v:true
 
+let g:aim = get(g:, 'aim', {})
+let g:aim.cursor = get(g:aim, 'cursor', { pos -> cursor(pos) })
+let g:aim.pattern = get(g:aim, 'pattern', { input -> '\V' . escape(input, '\/') })
+
 function! s:highlight() abort
   if !hlexists('AimLocation')
     highlight! default AimLocation

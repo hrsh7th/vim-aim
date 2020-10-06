@@ -12,7 +12,7 @@ function! aim#start(dir) abort
   try
     let l:input = input('/')
     if empty(l:input)
-      call cursor(s:state.orig_pos)
+      call g:aim.goto(s:state.orig_pos)
     endif
     redraw
   finally
@@ -63,7 +63,7 @@ function! s:on_input() abort
     endif
   endfor
   for l:location in s:state.locations
-    call matchaddpos('AimLocation', [[l:location[0], l:location[1], strlen(s:state.input)]])
+    call matchaddpos('AimLocation', [[l:location[0], l:location[1], strlen(l:location[2])]])
   endfor
   call s:move(s:state.orig_dir, s:state.orig_pos)
   redraw
@@ -75,13 +75,13 @@ endfunction
 function! s:move(dir, from_pos) abort
   let l:location = s:find(a:dir, s:state.input, a:from_pos)
   if !empty(l:location)
-    call cursor(l:location)
+    call g:aim.goto(l:location)
     for l:match in getmatches()
       if l:match.group ==# 'AimCurrentLocation'
         call matchdelete(l:match.id)
       endif
     endfor
-    call matchaddpos('AimCurrentLocation', [[l:location[0], l:location[1], strlen(s:state.input)]])
+    call matchaddpos('AimCurrentLocation', [[l:location[0], l:location[1], strlen(l:location[2])]])
   endif
   return ''
 endfunction
@@ -119,27 +119,29 @@ endfunction
 " get_locations
 "
 function! s:get_locations(input, pos) abort
-  let l:locations = []
+  let l:pattern = '\(' . g:aim.pattern(a:input) . '\)'
 
+  let l:locations = []
   call cursor(a:pos)
   while v:true
-    let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/'), 'bW')
+    let [l:lnum, l:col] = searchpos(l:pattern, 'bW')
     if l:lnum == 0
       break
     endif
-    let l:locations += [[l:lnum, l:col]]
+    let l:locations += [[l:lnum, l:col, matchstr(getline(l:lnum)[l:col - 1 : -1], l:pattern)]]
   endwhile
   let l:locations = reverse(l:locations)
+
   call cursor(a:pos)
   while v:true
-    let [l:lnum, l:col] = searchpos('\V' . escape(a:input, '\/'), 'W')
+    let [l:lnum, l:col, l:sub] = searchpos(l:pattern, 'Wp')
     if l:lnum == 0
       break
     endif
-    let l:locations += [[l:lnum, l:col]]
+    let l:locations += [[l:lnum, l:col, matchstr(getline(l:lnum)[l:col - 1 : -1], l:pattern)]]
   endwhile
-  call cursor(a:pos)
 
+  call cursor(a:pos)
   return l:locations
 endfunction
 
